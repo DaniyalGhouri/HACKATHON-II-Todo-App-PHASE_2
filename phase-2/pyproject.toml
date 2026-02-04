@@ -1,0 +1,17 @@
+[project]
+name = "todo-cli-app"
+version = "0.1.0"
+description = "Todo In-Memory Python Console Application"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "mypy>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"

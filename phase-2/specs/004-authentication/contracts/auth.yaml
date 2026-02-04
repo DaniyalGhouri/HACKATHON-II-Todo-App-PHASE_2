@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: Authentication Contract (Internal)
+  version: 1.0.0
+  description: >
+    Note: Authentication logic (Login/Signup) is handled by the Frontend via Better Auth.
+    The Backend does NOT expose public auth endpoints.
+    This contract defines the Expected Token Payload the backend verifies.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    JWTPayload:
+      type: object
+      properties:
+        sub:
+          type: string
+          description: User ID
+        email:
+          type: string
+          format: email
+        exp:
+          type: integer
+          description: Expiration timestamp
+        iat:
+          type: integer
+          description: Issued at timestamp
+
+security:
+  - bearerAuth: []
