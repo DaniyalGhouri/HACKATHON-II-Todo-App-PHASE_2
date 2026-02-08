@@ -11,20 +11,22 @@ from src.api import chat, tasks
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Trigger DB Init immediately for Serverless stability
-try:
-    init_db()
-    logger.info("Database initialized successfully")
-except Exception as e:
-    logger.error(f"Database initialization failed: {e}")
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Trigger DB Init on startup (more stable for HF)
+    try:
+        if os.getenv("DATABASE_URL"):
+            init_db()
+            logger.info("Database initialized successfully")
+        else:
+            logger.warning("DATABASE_URL not found, skipping init_db")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
     yield
 
 app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
 
-# Global Error Handler to see exact 500 issues in logs
+# Global Error Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global Error: {exc}")
