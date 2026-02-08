@@ -11,4 +11,4 @@ export const authClient = createAuthClient({
 });
 
 // Re-export hooks if needed, but the authClient instance directly exposes signIn/signUp
-export const { useSession, useUser, signIn, signOut } = authClient;
+export const { useSession, signIn, signOut } = authClient;
