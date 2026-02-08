@@ -1,58 +1,42 @@
-from agents import Agent, OpenAIChatCompletionsModel, set_tracing_disabled
-from openai import AsyncOpenAI
+from agents import Agent, set_tracing_disabled
+from agents.extensions.models.litellm_model import LitellmModel
 import os
 from dotenv import load_dotenv
 from ..mcp.tools import add_task, list_tasks, update_task, complete_task, delete_task
 
 load_dotenv()
 
-# Disable tracing to avoid OPENAI_API_KEY requirement for trace exports
 set_tracing_disabled(True)
 
-# 1. Configure the Groq Client (OpenAI-compatible)
-external_client: AsyncOpenAI = AsyncOpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1",
+llm_model = LitellmModel(
+    model="groq/llama-3.3-70b-versatile",
+    api_key=os.getenv("GROQ_API_KEY")
 )
-
-# 2. Define the Groq Model
-llm_model: OpenAIChatCompletionsModel = OpenAIChatCompletionsModel(
-    model="llama-3.3-70b-versatile",
-    openai_client=external_client
-)
-
-# 3. Agent System Prompt
 
 BASE_SYSTEM_PROMPT = """
 You are a high-performance 2026-grade Todo AI Assistant.
-You help users manage their tasks with precision and intelligence.
 
-Available Capabilities:
-- add_task: Create new tasks. You can set title, description, due_date, and priority (low, medium, high).
-- list_tasks: Retrieve user tasks. You can see completion status, priority, and due dates.
-- update_task: Modify existing tasks, including changing priority or due dates.
-- complete_task: Mark a task as finished.
-- delete_task: Permanently remove a task.
+Available Tools:
+- add_task: (title, description, due_date, priority)
+- list_tasks: (status_filter: 'all'|'completed'|'pending')
+- update_task: (task_id: int, title, description, due_date, priority)
+- complete_task: (task_id: int)
+- delete_task: (task_id: int)
 
-Guidelines:
-1. ALWAYS use the provided tools.
-2. When listing tasks, summarize the counts of pending and completed tasks to show oversight.
-3. Pay attention to due dates and priorities. If a task is high priority or overdue, mention it.
-4. If a user doesn't specify priority, default to 'medium'.
-5. Always be professional, concise, and helpful.
+CRITICAL RULES:
+1. TOOL FORMAT: You MUST use exactly: <function=tool_name>{"arg": "val"}</function>
+2. NO COMMAS: Do NOT put a comma between the tool name and the JSON bracket. (Correct: <function=list_tasks>{"status_filter":"all"}...)
+3. NO NULL IDs: Never send 'task_id': null. If you don't know the ID, call list_tasks first to find it.
+4. REQUIRED ARGS: Always include 'user_id' and 'status_filter' in list_tasks calls.
+5. WORKFLOW: If a user asks to update/delete a task but you haven't listed them yet, call list_tasks first to find the ID.
 """
 
-
-
-# 4. Create the Agent
-
 def get_todo_agent(user_id: str) -> Agent:
-
-    # Inject user_id into instructions so the agent knows it for tool calls
-
-    instructions = f"{BASE_SYSTEM_PROMPT}\n\nCRITICAL: The current user_id is '{user_id}'. You MUST pass this value as the 'user_id' parameter for every tool call."
-
+    # Inject current date and user_id into instructions
+    from datetime import datetime
+    current_date = datetime.now().strftime("%A, %B %d, %Y")
     
+    instructions = f"{BASE_SYSTEM_PROMPT}\n\nCRITICAL:\n- Today is {current_date}.\n- The current user_id is '{user_id}'. Include 'user_id': '{user_id}' in every tool call JSON."
 
     return Agent(
         name="TodoAssistant",

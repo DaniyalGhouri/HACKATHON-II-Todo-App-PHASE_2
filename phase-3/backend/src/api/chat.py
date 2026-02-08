@@ -62,13 +62,28 @@ async def chat_endpoint(
     agent = get_todo_agent(user_id=user_id)
     
     try:
-        # We use await Runner.run because FastAPI is already running in an event loop
-        result = await Runner.run(
-            agent,
-            formatted_messages
-        )
+        import asyncio
+        import litellm
         
-        response_text = result.final_output
+        max_retries = 3
+        retry_count = 0
+        response_text = ""
+        
+        while retry_count < max_retries:
+            try:
+                # We use await Runner.run because FastAPI is already running in an event loop
+                result = await Runner.run(
+                    agent,
+                    formatted_messages
+                )
+                response_text = result.final_output
+                break # Success!
+            except litellm.RateLimitError as e:
+                retry_count += 1
+                if retry_count == max_retries:
+                    raise e
+                logger.warning(f"Rate limit hit, retrying in 2s... ({retry_count}/{max_retries})")
+                await asyncio.sleep(2) # Wait for Groq token bucket to refill
         
     except Exception as e:
         logger.error(f"Agent execution failed: {e}")

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Annotated, Any
 from sqlmodel import Session, select
 from ..models.task import Task, TaskPriority
 from ..services.db import engine
@@ -9,21 +9,19 @@ from agents import function_tool
 
 @function_tool
 @mcp.tool()
-def add_task(user_id: str, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None, priority: str = "medium") -> str:
+def add_task(
+    user_id: Annotated[str, "The ID of the authenticated user"], 
+    title: Annotated[str, "The title of the task"], 
+    description: Annotated[Optional[str], "Optional detailed description"] = None, 
+    due_date: Annotated[Optional[datetime], "Optional due date/time"] = None, 
+    priority: Annotated[str, "Task priority (low, medium, high). Defaults to medium"] = "medium"
+) -> str:
     """
-    Create a new todo task for a specific user.
-    
-    Args:
-        user_id: The ID of the authenticated user.
-        title: The title of the task.
-        description: Optional detailed description.
-        due_date: Optional due date/time.
-        priority: Task priority (low, medium, high). Defaults to medium.
+    Create a new todo task.
     """
-    # Convert string priority to Enum
     try:
         p_enum = TaskPriority(priority.lower())
-    except ValueError:
+    except Exception:
         p_enum = TaskPriority.MEDIUM
 
     with Session(engine) as session:
@@ -43,79 +41,53 @@ def add_task(user_id: str, title: str, description: Optional[str] = None, due_da
 
 @function_tool
 @mcp.tool()
-def list_tasks(user_id: str, completed: Optional[bool] = None) -> str:
+def list_tasks(
+    user_id: Annotated[str, "The ID of the authenticated user"], 
+    status_filter: Annotated[str, "Filter by status: 'all', 'completed', or 'pending'."] = "all"
+) -> str:
     """
-    List todo tasks for a user, optionally filtered by completion status.
-    Returns task titles, IDs, status, priority, and due date.
-    
-    Args:
-        user_id: The ID of the authenticated user.
-        completed: Optional completion status filter.
+    List user tasks with an optional filter.
     """
+    completed_val = None
+    if status_filter == "completed":
+        completed_val = True
+    elif status_filter == "pending":
+        completed_val = False
+
     with Session(engine) as session:
         statement = select(Task).where(Task.user_id == user_id)
-        if completed is not None:
-            statement = statement.where(Task.is_completed == completed)
+        if completed_val is not None:
+            statement = statement.where(Task.is_completed == completed_val)
         
         tasks = session.exec(statement).all()
         if not tasks:
-            res = "No tasks found."
-            log_tool_call("list_tasks", user_id, {"completed": completed}, res)
-            return res
+            return "No tasks found."
         
-        output = "Your tasks:\n"
+        output = f"Your tasks ({status_filter}):\n"
         for t in tasks:
             status = "[x]" if t.is_completed else "[ ]"
             due = f", Due: {t.due_date.strftime('%Y-%m-%d %H:%M')}" if t.due_date else ""
-            output += f"{t.id}. {status} {t.title} (Priority: {t.priority.value}{due})\n"
-        log_tool_call("list_tasks", user_id, {"completed": completed}, "Success")
+            output += f"ID {t.id}: {status} {t.title} (Priority: {t.priority.value}{due})\n"
         return output
 
 @function_tool
 @mcp.tool()
-def complete_task(user_id: str, task_id: int) -> str:
+def update_task(
+    user_id: Annotated[str, "The ID of the authenticated user"], 
+    task_id: Annotated[int, "The integer ID of the task to update"], 
+    title: Annotated[Optional[str], "New title"] = None, 
+    description: Annotated[Optional[str], "New description"] = None, 
+    due_date: Annotated[Optional[datetime], "New due date"] = None, 
+    priority: Annotated[Optional[str], "New priority (low, medium, high)"] = None
+) -> str:
     """
-    Mark a specific task as completed.
-    
-    Args:
-        user_id: The ID of the authenticated user.
-        task_id: The ID of the task to complete.
-    """
-    with Session(engine) as session:
-        statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        task = session.exec(statement).first()
-        if not task:
-            res = f"Task {task_id} not found."
-            log_tool_call("complete_task", user_id, {"task_id": task_id}, res)
-            return res
-        
-        task.is_completed = True
-        task.updated_at = datetime.utcnow()
-        session.add(task)
-        session.commit()
-        res = f"Task '{task.title}' marked as completed."
-        log_tool_call("complete_task", user_id, {"task_id": task_id}, res)
-        return res
-
-@function_tool
-@mcp.tool()
-def update_task(user_id: str, task_id: int, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None, priority: Optional[str] = None) -> str:
-    """
-    Update details of an existing task.
-    
-    Args:
-        user_id: The ID of the authenticated user.
-        task_id: The ID of the task to update.
-        title: Optional new title.
-        description: Optional new description.
-        due_date: Optional new due date.
-        priority: Optional new priority.
+    Update an existing task.
     """
     with Session(engine) as session:
         statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
         task = session.exec(statement).first()
         if not task:
-            return f"Task {task_id} not found."
+            return f"Task {task_id} not found. Use list_tasks to find the correct ID."
         
         if title: task.title = title
         if description: task.description = description
@@ -123,7 +95,7 @@ def update_task(user_id: str, task_id: int, title: Optional[str] = None, descrip
         if priority:
             try:
                 task.priority = TaskPriority(priority.lower())
-            except ValueError:
+            except Exception:
                 pass
         
         task.updated_at = datetime.utcnow()
@@ -133,20 +105,31 @@ def update_task(user_id: str, task_id: int, title: Optional[str] = None, descrip
 
 @function_tool
 @mcp.tool()
-def delete_task(user_id: str, task_id: int) -> str:
-    """
-    Delete a task from the system.
-    
-    Args:
-        user_id: The ID of the authenticated user.
-        task_id: The ID of the task to delete.
-    """
+def complete_task(
+    user_id: Annotated[str, "The ID of the authenticated user"], 
+    task_id: Annotated[int, "The integer ID of the task to complete"]
+) -> str:
+    """Mark a task as finished."""
     with Session(engine) as session:
         statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
         task = session.exec(statement).first()
-        if not task:
-            return f"Task {task_id} not found."
-        
+        if not task: return f"Task {task_id} not found."
+        task.is_completed = True
+        session.add(task)
+        session.commit()
+        return f"Task {task_id} completed."
+
+@function_tool
+@mcp.tool()
+def delete_task(
+    user_id: Annotated[str, "The ID of the authenticated user"], 
+    task_id: Annotated[int, "The integer ID of the task to delete"]
+) -> str:
+    """Delete a task."""
+    with Session(engine) as session:
+        statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        task = session.exec(statement).first()
+        if not task: return f"Task {task_id} not found."
         session.delete(task)
         session.commit()
         return f"Task {task_id} deleted."
