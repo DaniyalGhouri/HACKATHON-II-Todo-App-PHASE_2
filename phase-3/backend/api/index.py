@@ -15,7 +15,11 @@ app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
 # Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://hackathon-ii-todo-app-phase-2-5k4v.vercel.app",
+        "https://hackathon-ii-todo-app-phase-2.vercel.app",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
