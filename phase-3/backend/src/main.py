@@ -26,6 +26,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def read_root():
+    return {"message": "Phase 3 Todo AI API is Live", "docs": "/docs"}
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
