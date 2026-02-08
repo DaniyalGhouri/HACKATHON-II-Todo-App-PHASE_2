@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from contextlib import asynccontextmanager
 from src.services.db import init_db
 from src.api import chat, tasks
+from better_auth import BetterAuth
+from fastapi import Request, Response
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,6 +14,17 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
+
+# Initialize Better Auth
+auth = BetterAuth(
+    secret=os.getenv("BETTER_AUTH_SECRET"),
+    database_url=os.getenv("DATABASE_URL")
+)
+
+# Better Auth Route Handler
+@app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def auth_handler(request: Request):
+    return await auth.handler(request)
 
 # Add CORS Middleware
 app.add_middleware(
