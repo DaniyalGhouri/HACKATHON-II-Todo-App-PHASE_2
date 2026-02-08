@@ -1,0 +1,69 @@
+{
+  "tools": [
+    {
+      "name": "add_task",
+      "description": "Create a new todo task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "due_date": { "type": "string", "format": "date-time" }
+        },
+        "required": ["user_id", "title"]
+      }
+    },
+    {
+      "name": "list_tasks",
+      "description": "List tasks with optional filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "completed": { "type": "boolean" }
+        },
+        "required": ["user_id"]
+      }
+    },
+    {
+      "name": "update_task",
+      "description": "Update an existing task's details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "task_id": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "due_date": { "type": "string", "format": "date-time" }
+        },
+        "required": ["user_id", "task_id"]
+      }
+    },
+    {
+      "name": "complete_task",
+      "description": "Mark a task as completed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "task_id": { "type": "integer" }
+        },
+        "required": ["user_id", "task_id"]
+      }
+    },
+    {
+      "name": "delete_task",
+      "description": "Remove a task from the system.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "task_id": { "type": "integer" }
+        },
+        "required": ["user_id", "task_id"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+fastapi
+openai-agents
+mcp
+sqlmodel
+psycopg2-binary
+uvicorn
+python-dotenv
+python-multipart
+sse-starlette
+jsonschema
+pydantic-settings
+pydantic>=2.7.0
+better-auth
