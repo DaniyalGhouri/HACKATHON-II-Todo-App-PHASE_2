@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from src.services.db import init_db
 from src.api import chat, tasks
 from better_auth import BetterAuth
-from fastapi import Request, Response
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,29 +14,34 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
 
+# PROPER PRODUCTION CORS
+# We must list the specific origins to allow credentials (cookies)
+allowed_origins = [
+    "https://hackathon-ii-todo-app-phase-2-5k4v.vercel.app",
+    "https://hackathon-ii-todo-app-phase-2.vercel.app",
+    "http://localhost:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize Better Auth
 auth = BetterAuth(
     secret=os.getenv("BETTER_AUTH_SECRET"),
     database_url=os.getenv("DATABASE_URL")
 )
 
-# Better Auth Route Handler
-@app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+# Better Auth Route Handler - Added "OPTIONS" for Preflight support
+@app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def auth_handler(request: Request):
+    if request.method == "OPTIONS":
+        return Response(status_code=204)
     return await auth.handler(request)
-
-# Add CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://hackathon-ii-todo-app-phase-2-5k4v.vercel.app",
-        "https://hackathon-ii-todo-app-phase-2.vercel.app",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Routes
 @app.get("/")
