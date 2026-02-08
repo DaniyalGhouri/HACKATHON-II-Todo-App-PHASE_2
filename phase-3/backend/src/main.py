@@ -2,22 +2,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .services.db import init_db
+from .api import chat, tasks
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize DB
     init_db()
     yield
-    # Shutdown
 
 app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
 
-# CORS Configuration
-origins = [
-    "http://localhost:3000", # Frontend
-    "http://127.0.0.1:3000",
-]
-
+# Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routes
 @app.get("/")
 def read_root():
     return {"message": "Phase 3 Todo AI API is Live", "docs": "/docs"}
@@ -34,6 +30,6 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-from .api import chat, tasks
+# Include Routers
 app.include_router(chat.router)
 app.include_router(tasks.router)
