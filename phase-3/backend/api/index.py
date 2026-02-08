@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
@@ -6,7 +6,6 @@ import logging
 from contextlib import asynccontextmanager
 from src.services.db import init_db
 from src.api import chat, tasks
-from better_auth import BetterAuth
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +36,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 allowed_origins = [
     "https://hackathon-ii-todo-app-phase-2-5k4v.vercel.app",
     "https://hackathon-ii-todo-app-phase-2.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://daniyal34-ai-todi-phase3.hf.space"
 ]
 
 app.add_middleware(
@@ -48,22 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Better Auth
-auth = BetterAuth(
-    secret=os.getenv("BETTER_AUTH_SECRET"),
-    database_url=os.getenv("DATABASE_URL")
-)
-
-@app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-async def auth_handler(request: Request):
-    if request.method == "OPTIONS":
-        return Response(status_code=204)
-    try:
-        return await auth.handler(request)
-    except Exception as e:
-        logger.error(f"Auth Handler Error: {e}")
-        raise e
-
+# Routes
 @app.get("/")
 def read_root():
     return {"message": "Phase 3 Todo AI API is Live", "docs": "/docs"}
@@ -72,5 +57,6 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
+# Include Routers
 app.include_router(chat.router)
 app.include_router(tasks.router)
