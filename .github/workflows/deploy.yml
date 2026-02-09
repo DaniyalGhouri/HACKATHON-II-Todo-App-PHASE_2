@@ -18,20 +18,14 @@ jobs:
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
         run: |
-          # 1. Setup HF repo
           git remote add hf https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
-          
-          # 2. Delete the problematic folder physically before git sees it in the new commit
           rm -rf phase-3/backend/.venv
-          
-          # 3. Create a totally new branch with NO history of .venv
           git checkout --orphan temp-branch
           
-          # 4. Add ONLY the files we want
-          git add phase-3/ .github/
+          # Add the README (metadata), phase-3 (code), and .github (workflow)
+          git add README.md phase-3/ .github/
           
-          # 5. Commit and Push
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git commit -m "Deploying clean version"
+          git commit -m "Deploying clean version with HF metadata"
           git push --force hf temp-branch:main
