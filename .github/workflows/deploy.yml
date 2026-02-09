@@ -1,4 +1,4 @@
-name: Sync to Hugging Face hub
+﻿name: Sync to Hugging Face hub
 on:
   push:
     branches: [008-todo-ai-chatbot]
@@ -11,11 +11,27 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          lfs: true
+      
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
         run: |
-          git push --force https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME 008-todo-ai-chatbot:main
+          # 1. Setup HF repo
+          git remote add hf https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
+          
+          # 2. Delete the problematic folder physically before git sees it in the new commit
+          rm -rf phase-3/backend/.venv
+          
+          # 3. Create a totally new branch with NO history of .venv
+          git checkout --orphan temp-branch
+          
+          # 4. Add ONLY the files we want
+          git add phase-3/ .github/
+          
+          # 5. Commit and Push
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git commit -m "Deploying clean version"
+          git push --force hf temp-branch:main
