@@ -18,14 +18,24 @@ jobs:
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
         run: |
-          git remote add hf https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
-          rm -rf phase-3/backend/.venv
-          git checkout --orphan temp-branch
+          # 1. Create a temporary deployment folder
+          mkdir deploy_dir
           
-          # Add the README (metadata), phase-3 (code), and .github (workflow)
-          git add README.md phase-3/ .github/
+          # 2. Copy the Backend files to the ROOT of deploy_dir
+          cp -r phase-3/backend/* deploy_dir/
           
+          # 3. Copy the README.md to the ROOT of deploy_dir
+          cp README.md deploy_dir/
+          
+          # 4. Initialize a clean repo in deploy_dir
+          cd deploy_dir
+          git init
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git commit -m "Deploying clean version with HF metadata"
-          git push --force hf temp-branch:main
+          
+          # 5. Add and Commit (Dockerfile is now at the root!)
+          git add .
+          git commit -m "Deploying flattened backend to Hugging Face"
+          
+          # 6. Force push to Hugging Face main branch
+          git push --force https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME HEAD:main
