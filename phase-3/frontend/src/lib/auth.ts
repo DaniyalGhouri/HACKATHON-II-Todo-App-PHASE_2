@@ -17,19 +17,14 @@ export const auth = betterAuth({
   plugins: [
     jwt() 
   ],
-  session: {
-    cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60,
-    }
-  },
   cookies: {
     sessionToken: {
+      name: "better-auth.session_token",
       options: {
-        httpOnly: false, // Allow client-side access for cross-domain header passing
+        sameSite: "none",
         secure: true,
-        sameSite: "none", // Required for cross-site cookie usage if not proxied
-      }
-    }
+        httpOnly: true,
+      },
+    },
   }
 });

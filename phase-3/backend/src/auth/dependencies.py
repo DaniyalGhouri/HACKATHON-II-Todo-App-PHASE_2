@@ -80,12 +80,6 @@ def get_current_user(
             "name": user_record[2]
         }
 
-        return {
-            "id": user_record[0], 
-            "email": user_record[1], 
-            "name": user_record[2]
-        }
-
     except HTTPException:
         raise
     except Exception as e:
