@@ -1,16 +1,22 @@
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlmodel import Session, text
 import os
 from dotenv import load_dotenv
-from .utils import verify_token
+from ..services.db import get_session
 
 load_dotenv()
 
 security = HTTPBearer(auto_error=False)
 
-def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(
+    request: Request, 
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: Session = Depends(get_session)
+) -> dict:
     """
-    Authenticates the user via Bearer token or session cookie.
+    Authenticates the user via Bearer token or session cookie by checking the database.
+    This works with Better Auth's shared database strategy.
     """
     token = None
     
@@ -30,19 +36,39 @@ def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials
         )
     
     try:
-        # In a real app with Better Auth, you'd verify the session/token properly
-        # For now, we use our verify_token utility or mock it
-        payload = verify_token(token)
-        return payload
+        # 1. Look up session in Better Auth's session table
+        # We use raw SQL because these tables are managed by Better Auth (TS)
+        session_query = text('SELECT "userId", "expiresAt" FROM "session" WHERE "token" = :token LIMIT 1')
+        session_record = session.execute(session_query, {"token": token}).first()
+        
+        if not session_record:
+            # Fallback for development if token is just a user ID
+            if os.getenv("ENV") == "development":
+                return {"id": token, "email": "dev@example.com"}
+            raise HTTPException(status_code=401, detail="Invalid session")
+
+        user_id, expires_at = session_record
+
+        # 2. Get user details from 'user' table
+        user_query = text('SELECT "id", "email", "name" FROM "user" WHERE "id" = :id LIMIT 1')
+        user_record = session.execute(user_query, {"id": user_id}).first()
+        
+        if not user_record:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        return {
+            "id": user_record[0], 
+            "email": user_record[1], 
+            "name": user_record[2]
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        # Fallback for prototype: if verify_token fails but we have a token,
-        # and it's not a JWT (e.g. raw user id in dev), handle it.
-        # But here we should be strict or provide a clear dev path.
-        if os.getenv("ENV") == "development":
-             return {"id": token, "email": "dev@example.com"}
+        print(f"--- [ERROR] Database Auth Failed: {str(e)} ---")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail="Authentication failed",
         )
 
 def get_current_user_id(user: dict = Depends(get_current_user)) -> str:
