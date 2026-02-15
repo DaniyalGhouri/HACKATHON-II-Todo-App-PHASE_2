@@ -37,9 +37,13 @@ def get_current_user(
     
     try:
         # 1. Look up session in Better Auth's session table
-        # We use raw SQL because these tables are managed by Better Auth (TS)
-        session_query = text('SELECT "userId", "expiresAt" FROM "session" WHERE "token" = :token LIMIT 1')
-        session_record = session.execute(session_query, {"token": token}).first()
+        # We try standard camelCase first (Better Auth default), then fallback to lowercase
+        try:
+            session_query = text('SELECT "userId", "expiresAt" FROM "session" WHERE "token" = :token LIMIT 1')
+            session_record = session.execute(session_query, {"token": token}).first()
+        except Exception:
+            session_query = text('SELECT userid, expiresat FROM session WHERE token = :token LIMIT 1')
+            session_record = session.execute(session_query, {"token": token}).first()
         
         if not session_record:
             # Fallback for development if token is just a user ID
@@ -50,8 +54,12 @@ def get_current_user(
         user_id, expires_at = session_record
 
         # 2. Get user details from 'user' table
-        user_query = text('SELECT "id", "email", "name" FROM "user" WHERE "id" = :id LIMIT 1')
-        user_record = session.execute(user_query, {"id": user_id}).first()
+        try:
+            user_query = text('SELECT "id", "email", "name" FROM "user" WHERE "id" = :id LIMIT 1')
+            user_record = session.execute(user_query, {"id": user_id}).first()
+        except Exception:
+            user_query = text('SELECT id, email, name FROM "user" WHERE id = :id LIMIT 1')
+            user_record = session.execute(user_query, {"id": user_id}).first()
         
         if not user_record:
             raise HTTPException(status_code=401, detail="User not found")
