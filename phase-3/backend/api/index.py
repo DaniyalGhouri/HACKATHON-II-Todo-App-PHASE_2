@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 import os
 import logging
 from contextlib import asynccontextmanager
@@ -10,6 +11,10 @@ from src.api import chat, tasks
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Log environment for debugging
+logger.info(f"--- [ENV DEBUG] NODE_ENV: {os.getenv('NODE_ENV')} ---")
+logger.info(f"--- [ENV DEBUG] ENV: {os.getenv('ENV')} ---")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +30,9 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Todo AI Chatbot", lifespan=lifespan)
+
+# Add ProxyHeadersMiddleware to ensure correct protocol detection (HTTP vs HTTPS)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Global Error Handler
 @app.exception_handler(Exception)
