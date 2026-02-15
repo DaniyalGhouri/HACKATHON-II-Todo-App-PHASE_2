@@ -33,8 +33,8 @@ def create_task_endpoint(
 
 @router.get("/api/tasks", response_model=list[TaskRead])
 def list_tasks_endpoint(
-    status: str = Query("all", regex="^(all|pending|completed)$"),
-    sort: str = Query("created", regex="^(created|title)$"),
+    status: str = Query("all", pattern="^(all|pending|completed)$"),
+    sort: str = Query("created", pattern="^(created|title)$"),
     current_user: dict = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
