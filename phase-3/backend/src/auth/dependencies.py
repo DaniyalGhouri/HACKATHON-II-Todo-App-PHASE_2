@@ -54,20 +54,20 @@ def get_current_user(
     try:
         # Check standard camelCase first, then fallback to lowercase
         session_query = text('SELECT "userId" FROM "session" WHERE "token" = :token LIMIT 1')
-        result = db_session.execute(session_query, {"token": token}).first()
+        result = db_session.exec(session_query, {"token": token}).first()
         
         if not result:
             session_query = text('SELECT userid FROM session WHERE token = :token LIMIT 1')
-            result = db_session.execute(session_query, {"token": token}).first()
+            result = db_session.exec(session_query, {"token": token}).first()
 
         if result:
             user_id = result[0]
             user_query = text('SELECT "id", "email", "name" FROM "user" WHERE "id" = :id LIMIT 1')
-            user_record = db_session.execute(user_query, {"id": user_id}).first()
+            user_record = db_session.exec(user_query, {"id": user_id}).first()
             
             if not user_record:
                 user_query = text('SELECT id, email, name FROM "user" WHERE id = :id LIMIT 1')
-                user_record = db_session.execute(user_query, {"id": user_id}).first()
+                user_record = db_session.exec(user_query, {"id": user_id}).first()
 
             if user_record:
                 return {"id": user_record[0], "email": user_record[1], "name": user_record[2]}
