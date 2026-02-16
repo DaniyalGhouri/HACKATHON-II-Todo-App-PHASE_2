@@ -46,8 +46,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 allowed_origins = [
     "https://hackathon-ii-todo-app-phase-2-5k4v.vercel.app",
     "https://hackathon-ii-todo-app-phase-2.vercel.app",
-    "http://localhost:3000",
-    "https://daniyal34-ai-todi-phase3.hf.space"
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
