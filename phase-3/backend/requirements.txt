@@ -10,5 +10,4 @@ sse-starlette
 jsonschema
 pydantic-settings
 pydantic>=2.7.0
-better-auth
 litellm
